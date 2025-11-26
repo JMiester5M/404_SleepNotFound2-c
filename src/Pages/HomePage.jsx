@@ -1,5 +1,5 @@
 // HomePage.jsx - Main dashboard showing tasks overview and stats
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardCard from '../components/DashboardCard'; 
 import CloudDecoration from '../components/CloudDecoration';
 import '../Styles/Pages.css';

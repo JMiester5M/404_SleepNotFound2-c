@@ -17,7 +17,10 @@ export default function TimerPage() {
   const [inputSeconds, setInputSeconds] = useState('00');
   
   // Music player states
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(() => {
+    const saved = localStorage.getItem('najahMusicPlaying');
+    return saved === 'true';
+  });
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   // Lofi music playlist
@@ -27,7 +30,10 @@ export default function TimerPage() {
     { id: 3, name: 'Aromatic', url: '/Lofi2.mp3' },
     { id: 4, name: 'Noon', url: '/Lofi3.mp3' },
   ]);
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(() => {
+    const saved = localStorage.getItem('najahCurrentTrack');
+    return saved ? parseInt(saved) : 0;
+  });
   
   // Get current song name from playlist
   const songName = playlist[currentTrackIndex]?.name || 'No song loaded';
@@ -61,8 +67,33 @@ export default function TimerPage() {
 
   // Initialize audio service and set up event listeners
   useEffect(() => {
-    audioService.init(playlist, currentTrackIndex);
+    // Check if audio service is already initialized
+    const currentAudio = audioService.getAudio();
+    const needsInit = !currentAudio || !currentAudio.src;
+    
+    if (needsInit) {
+      audioService.init(playlist, currentTrackIndex);
+      // Clear the playing state on first initialization
+      localStorage.setItem('najahMusicPlaying', 'false');
+      setIsPlaying(false);
+    }
     audioService.setLoop(loopTrack);
+
+    // Sync current time and duration from existing audio element
+    if (currentAudio && currentAudio.src) {
+      setCurrentTime(currentAudio.currentTime || 0);
+      setDuration(currentAudio.duration || 0);
+    }
+
+    // Resume playback only if it was playing before AND audio service was already initialized
+    const wasPlaying = localStorage.getItem('najahMusicPlaying') === 'true';
+    if (wasPlaying && !needsInit && currentAudio && currentAudio.src) {
+      audioService.play().catch(err => {
+        console.error('Resume play failed', err);
+        setIsPlaying(false);
+        localStorage.setItem('najahMusicPlaying', 'false');
+      });
+    }
 
     const onTime = () => {
       const a = audioService.getAudio();
@@ -79,13 +110,17 @@ export default function TimerPage() {
         } else {
           const isLast = currentTrackIndex === playlist.length - 1;
           if (!isLast) audioService.next();
-          else setIsPlaying(false);
+          else {
+            setIsPlaying(false);
+            localStorage.setItem('najahMusicPlaying', 'false');
+          }
         }
       }
     };
     const onTrackChange = (idx) => {
       // update current track index and sync playback info; songName is derived elsewhere
       setCurrentTrackIndex(idx);
+      localStorage.setItem('najahCurrentTrack', idx.toString());
       const a = audioService.getAudio();
       if (a) {
         setDuration(a.duration || 0);
@@ -137,9 +172,11 @@ export default function TimerPage() {
         setAudioError(err && err.message ? err.message : 'Playback blocked by browser');
       });
       setIsPlaying(true);
+      localStorage.setItem('najahMusicPlaying', 'true');
     } else {
       audioService.pause();
       setIsPlaying(false);
+      localStorage.setItem('najahMusicPlaying', 'false');
     }
   };
 
@@ -152,6 +189,7 @@ export default function TimerPage() {
     setInputSeconds('00');
     audioService.pause();
     setIsPlaying(false);
+    localStorage.setItem('najahMusicPlaying', 'false');
   };
 
   const handleTimerClick = () => {
@@ -210,9 +248,11 @@ export default function TimerPage() {
         setAudioError(err && err.message ? err.message : 'Playback blocked by browser');
       });
       setIsPlaying(true);
+      localStorage.setItem('najahMusicPlaying', 'true');
     } else {
       audioService.pause();
       setIsPlaying(false);
+      localStorage.setItem('najahMusicPlaying', 'false');
     }
   };
 
