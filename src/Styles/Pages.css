@@ -2944,3 +2944,229 @@ body {
 .chat-send-btn:hover:not(:disabled) svg {
   transform: translateX(2px);
 }
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  /* Timer Page Mobile Optimization */
+  .timer-page {
+    padding: 15px;
+    padding-bottom: 100px;
+  }
+
+  .timer-hero {
+    margin-bottom: 20px;
+  }
+
+  .timer-icon {
+    width: 60px;
+    height: 60px;
+  }
+
+  .timer-icon svg {
+    width: 50px;
+    height: 50px;
+  }
+
+  .timer-title {
+    font-size: 1.8rem;
+  }
+
+  .timer-subtitle {
+    font-size: 0.85rem;
+  }
+
+  .timer-display-container {
+    padding: 20px 15px;
+    margin-bottom: 15px;
+  }
+
+  .timer-display {
+    font-size: 3.5rem;
+    margin-bottom: 15px;
+  }
+
+  .timer-edit {
+    font-size: 3rem;
+  }
+
+  .timer-input {
+    font-size: 3rem;
+    width: 2.2ch;
+  }
+
+  .timer-controls {
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+  }
+
+  .control-button {
+    padding: 14px 28px;
+    font-size: 1rem;
+  }
+
+  .pause-play-button {
+    padding: 14px;
+  }
+
+  .pause-play-button svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .refresh-button {
+    padding: 14px;
+  }
+
+  .refresh-button svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  /* Music Player Mobile */
+  .music-info {
+    width: 90%;
+    padding: 12px;
+  }
+
+  .music-label {
+    font-size: 0.75rem;
+  }
+
+  .song-title {
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+  }
+
+  .playlist-info {
+    font-size: 0.7rem;
+  }
+
+  .music-controls {
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .music-play-button {
+    width: 42px;
+    height: 42px;
+  }
+
+  .music-play-button svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .music-nav-button {
+    width: 32px;
+    height: 32px;
+  }
+
+  .music-loop-button {
+    width: 32px;
+    height: 32px;
+  }
+
+  /* Volume Control Mobile */
+  .volume-control {
+    max-width: 80%;
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .volume-slider {
+    height: 6px;
+  }
+
+  .volume-slider::-webkit-slider-thumb {
+    width: 16px;
+    height: 16px;
+  }
+
+  .volume-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+  }
+
+  .volume-percentage {
+    font-size: 0.8rem;
+    min-width: 35px;
+  }
+
+  /* Playlist Mobile */
+  .playlist-container {
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+
+  .playlist-tracks {
+    max-height: 120px;
+    gap: 5px;
+  }
+
+  .playlist-track {
+    width: 85%;
+    padding: 6px 8px;
+  }
+
+  .playlist-track-number {
+    font-size: 0.75rem;
+    min-width: 18px;
+  }
+
+  .playlist-track-name {
+    font-size: 0.8rem;
+  }
+
+  /* Progress Bar Mobile */
+  .progress-bar-container {
+    width: 90%;
+    margin-top: 12px;
+  }
+
+  .progress-bar {
+    height: 6px;
+  }
+
+  .progress-time {
+    width: 90%;
+    font-size: 0.75rem;
+    margin-top: 6px;
+  }
+}
+
+/* Extra Small Mobile (iPhone SE, etc.) */
+@media (max-width: 375px) {
+  .timer-display {
+    font-size: 2.8rem;
+  }
+
+  .timer-edit {
+    font-size: 2.5rem;
+  }
+
+  .timer-input {
+    font-size: 2.5rem;
+  }
+
+  .timer-title {
+    font-size: 1.5rem;
+  }
+
+  .control-button {
+    padding: 12px 20px;
+    font-size: 0.9rem;
+  }
+
+  .music-info {
+    width: 95%;
+  }
+
+  .volume-control {
+    max-width: 90%;
+  }
+
+  .playlist-track {
+    width: 95%;
+  }
+}
