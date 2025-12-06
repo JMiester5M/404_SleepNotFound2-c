@@ -1,15 +1,11 @@
 // VolumeControl component - floating volume control overlay
-import { useState, useEffect } from 'react';
-import audioService from '../Utils/audioService';
-import '../Styles/Pages.css';
+import { useState } from 'react';
+import audioService from '../utils/audioService';
 
 export default function VolumeControl() {
-  // Get initial volume from audio service
-  const [volume, setVolume] = useState(audioService.getVolume());
-  // Track if volume slider is expanded (on hover)
+  const [volume, setVolume] = useState(0.7);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Handle volume slider change
   const handleVolumeChange = (e) => {
     const newVolume = parseFloat(e.target.value);
     setVolume(newVolume);

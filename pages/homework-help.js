@@ -1,10 +1,8 @@
-// HomeworkHelpPage - AI-powered homework assistant using Gemini API
+// HomeworkHelpPage - AI-powered homework assistant with secure API
 import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import '../Styles/Pages.css';
 
 export default function HomeworkHelpPage() {
-  // Initialize with welcome message
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -14,100 +12,52 @@ export default function HomeworkHelpPage() {
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  // Ref for auto-scrolling to bottom of chat
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Auto-scroll when new messages are added
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  // Handle form submission and API call
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
 
-    // Create user message
     const userMessage = {
       id: Date.now(),
       role: 'user',
       content: input.trim()
     };
 
-    // Add user message to chat
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsTyping(true);
 
     try {
-      // Build conversation history for context
-      const conversationHistory = messages
-        .map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
-        .join('\n\n');
-
-      // Create prompt with conversation context
-      const fullPrompt = `You are a helpful homework assistant. Explain concepts clearly, guide step by step, and encourage the student.
-
-Previous conversation:
-${conversationHistory}
-
-User: ${userMessage.content}
-
-Please respond:`;
-
-      // Get API key from environment variables
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (!apiKey) throw new Error('No API key found. Set VITE_GEMINI_API_KEY in your .env file');
-
-      // ✅ Correct Gemini API call using generateContent endpoint
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'x-goog-api-key': apiKey
-          },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: fullPrompt
-              }]
-            }],
-            generationConfig: {
-              maxOutputTokens: 500
-            }
-          })
-        }
-      );
+      // Call secure API route
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: [...messages, userMessage] })
+      });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(`API Error: ${response.status} ${JSON.stringify(errorData)}`);
+        throw new Error(`API Error: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('AI Response:', data);
-
-      // Extract AI response text from nested structure
-      const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, no response from AI.';
-
-      // Add AI response to messages
-      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: aiText }]);
+      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: data.response }]);
     } catch (err) {
       console.error(err);
-      // Show error message to user
       setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: `Error: ${err.message}` }]);
     } finally {
       setIsTyping(false);
     }
   };
 
-  // Clear chat and reset to welcome message
   const clearChat = () => {
     setMessages([
       {
@@ -136,7 +86,7 @@ Please respond:`;
       <div className="chat-container">
         <div className="chat-header">
           <span>Chat</span>
-          <button className="clear-chat-btn" onClick={clearChat} title="Clear chat">
+          <button className="clear-chat-btn" onClick={clearChat}>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
               <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
             </svg>

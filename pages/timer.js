@@ -1,26 +1,20 @@
 // TimerPage - Pomodoro timer with integrated music player
 import { useState, useEffect, useRef } from 'react';
-import '../Styles/Pages.css';
-import audioService from '../Utils/audioService';
+import audioService from '../utils/audioService';
 
 export default function TimerPage() {
-  // Load saved timer preference or default to 25 minutes
-  const defaultTimerMinutes = parseInt(localStorage.getItem('najahDefaultTimer')) || 25;
-  
+  const DEFAULT_TIMER_MINUTES = 25;
   // Timer state
-  const [minutes, setMinutes] = useState(defaultTimerMinutes);
+  const [minutes, setMinutes] = useState(DEFAULT_TIMER_MINUTES);
   const [seconds, setSeconds] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   // Input state for editing timer
-  const [inputMinutes, setInputMinutes] = useState(String(defaultTimerMinutes).padStart(2, '0'));
+  const [inputMinutes, setInputMinutes] = useState(String(DEFAULT_TIMER_MINUTES).padStart(2, '0'));
   const [inputSeconds, setInputSeconds] = useState('00');
   
   // Music player states
-  const [isPlaying, setIsPlaying] = useState(() => {
-    const saved = localStorage.getItem('najahMusicPlaying');
-    return saved === 'true';
-  });
+  const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   // Lofi music playlist
@@ -30,10 +24,8 @@ export default function TimerPage() {
     { id: 3, name: 'Aromatic', url: '/Lofi2.mp3' },
     { id: 4, name: 'Noon', url: '/Lofi3.mp3' },
   ]);
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(() => {
-    const saved = localStorage.getItem('najahCurrentTrack');
-    return saved ? parseInt(saved) : 0;
-  });
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  const [hydrated, setHydrated] = useState(false);
   
   // Get current song name from playlist
   const songName = playlist[currentTrackIndex]?.name || 'No song loaded';
@@ -43,6 +35,23 @@ export default function TimerPage() {
   const [loopPlaylist, setLoopPlaylist] = useState(false);
   const loopTrackRef = useRef(loopTrack);
   const loopPlaylistRef = useRef(loopPlaylist);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const savedTimer = parseInt(localStorage.getItem('najahDefaultTimer'), 10);
+    if (!Number.isNaN(savedTimer)) {
+      setMinutes(savedTimer);
+      setInputMinutes(String(savedTimer).padStart(2, '0'));
+    }
+    const savedPlaying = localStorage.getItem('najahMusicPlaying');
+    setIsPlaying(savedPlaying === 'true');
+    const savedTrack = localStorage.getItem('najahCurrentTrack');
+    if (savedTrack) {
+      const idx = parseInt(savedTrack, 10);
+      if (!Number.isNaN(idx)) setCurrentTrackIndex(idx);
+    }
+    setHydrated(true);
+  }, []);
   
   // Update refs when state changes
   useEffect(() => {
@@ -56,17 +65,9 @@ export default function TimerPage() {
   // Error state for audio playback issues
   const [audioError, setAudioError] = useState('');
 
-  // Load default timer on component mount
-  useEffect(() => {
-    const savedTimer = parseInt(localStorage.getItem('najahDefaultTimer')) || 25;
-    if (!isRunning && minutes === defaultTimerMinutes && seconds === 0) {
-      setMinutes(savedTimer);
-      setInputMinutes(String(savedTimer).padStart(2, '0'));
-    }
-  }, []);
-
   // Initialize audio service and set up event listeners
   useEffect(() => {
+    if (!hydrated) return;
     // Check if audio service is already initialized
     const currentAudio = audioService.getAudio();
     const needsInit = !currentAudio || !currentAudio.src;
@@ -139,7 +140,7 @@ export default function TimerPage() {
       audioService.off('ended', onEnded);
       audioService.off('trackchange', onTrackChange);
     };
-  }, [currentTrackIndex, playlist.length]); // Removed loopTrack and loopPlaylist from dependencies
+  }, [currentTrackIndex, playlist.length, hydrated]); // Removed loopTrack and loopPlaylist from dependencies
 
   // Sync loopTrack state with audioService
   useEffect(() => audioService.setLoop(loopTrack), [loopTrack]);

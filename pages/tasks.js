@@ -1,37 +1,10 @@
 // TasksPage - Full task management with create, edit, delete, and subtasks
 import React, { useState, useEffect } from "react";
-import "../Styles/Pages.css";
-
 
 export default function TasksPage() {
-// Load tasks from localStorage on mount
-  const [tasks, setTasks] = useState(() => {
-    // try catch wraps the loading logic to handle errors
-      try {
-      //gets the saved tasks using tasks_v1 key
-      const raw = localStorage.getItem("tasks_v1");
-      if (!raw) return [];
-      //parse the raw JSON string (converts it back to JS object/array)
-      const parsed = JSON.parse(raw);
-      // goes through each task and transforms it to ensure consistent structure
-      return parsed.map((t, i) => ({
-      //normalize task fields(making sure all tasks have consistent structure)
-      //if task on left has id, use it, if not make a new one using Date.now() + index
-        id: t.id ?? Date.now() + i,
-        subject: t.subject ?? t.title ?? "Untitled",
-        description: t.description ?? t.task ?? "",
-      //!! double not operator (done = true/false)
-        done: !!t.done,
-        dueDate: t.dueDate ?? null,
-        priority: t.priority ?? "Medium",
-      //checks if subtasks is an array, if not sets it to empty array
-        subtasks: Array.isArray(t.subtasks) ? t.subtasks : [],
-      }));
-    //won't crash app if there is missing data
-    } catch {
-      return [];
-    }
-  });
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   // Form state for adding new tasks
   const [newSubject, setNewSubject] = useState("");
@@ -44,18 +17,66 @@ export default function TasksPage() {
   // Filter state
   const [filter, setFilter] = useState("All");
 
-  // Save tasks to local storage whenever they change
+  // Load tasks from the API on mount
   useEffect(() => {
-    try {
-      localStorage.setItem("tasks_v1", JSON.stringify(tasks));
-    } catch (e) {
-      // ignore storage errors
+    async function loadTasks() {
+      try {
+        setLoading(true);
+        const res = await fetch("/api/tasks");
+        const data = await res.json();
+        setTasks(Array.isArray(data) ? data : []);
+      } catch (e) {
+        setError("Could not load tasks");
+      } finally {
+        setLoading(false);
+      }
     }
-  }, [tasks]);
+    loadTasks();
+  }, []);
+
+  async function createTask(task) {
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(task),
+      });
+      if (!res.ok) throw new Error("Failed to create task");
+      const created = await res.json();
+      setTasks(prev => [created, ...prev]);
+    } catch (e) {
+      setError(e.message || "Failed to create task");
+    }
+  }
+
+  async function persistTask(task) {
+    try {
+      await fetch("/api/tasks", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(task),
+      });
+    } catch (e) {
+      setError("Failed to save changes");
+    }
+  }
+
+  async function deleteTask(id) {
+    try {
+      await fetch(`/api/tasks?id=${id}`, { method: "DELETE" });
+    } catch (e) {
+      setError("Failed to delete task");
+    }
+  }
 
   // Toggle task completion
   function toggleDone(id) {
-    setTasks(prev => prev.map(t => (t.id === id ? { ...t, done: !t.done } : t)));
+    setTasks(prev => {
+      const next = prev.map(t => (t.id === id ? { ...t, done: !t.done } : t));
+      const updated = next.find(t => t.id === id);
+      if (updated) persistTask(updated);
+      return next;
+    });
   }
 
   // Add a new task
@@ -72,7 +93,7 @@ export default function TasksPage() {
       dueDate: newDueDate || null,
       subtasks: [],
     };
-    setTasks(prev => [next, ...prev]); // Add to beginning of list
+    createTask(next);
     // Reset form
     setNewSubject("");
     setNewDescription("");
@@ -83,6 +104,7 @@ export default function TasksPage() {
   // Remove a task
   function removeTask(id) {
     setTasks(prev => prev.filter(t => t.id !== id));
+    deleteTask(id);
   }
 
   // Start editing a task
@@ -93,14 +115,24 @@ export default function TasksPage() {
 
   // Save edited task
   function saveEdit(id) {
-    setTasks(prev => prev.map(t => (t.id === id ? { ...t, subject: editValues.subject.trim() || t.subject, description: editValues.description } : t)));
+    setTasks(prev => prev.map(t => {
+      if (t.id !== id) return t;
+      const updated = { ...t, subject: editValues.subject.trim() || t.subject, description: editValues.description };
+      persistTask(updated);
+      return updated;
+    }));
     setEditingId(null);
     setEditValues({ subject: "", description: "" });
   }
 
   // Update task properties (priority, due date, etc.)
   function updateTask(id, patch) {
-    setTasks(prev => prev.map(t => (t.id === id ? { ...t, ...patch } : t)));
+    setTasks(prev => prev.map(t => {
+      if (t.id !== id) return t;
+      const updated = { ...t, ...patch };
+      persistTask(updated);
+      return updated;
+    }));
   }
 
   // Subtasks functions
@@ -109,7 +141,9 @@ export default function TasksPage() {
     setTasks(prev => prev.map(t => {
       if (t.id !== taskId) return t;
       const nextSub = { id: Date.now(), text, done: false };
-      return { ...t, subtasks: [...(t.subtasks || []), nextSub] };
+      const updated = { ...t, subtasks: [...(t.subtasks || []), nextSub] };
+      persistTask(updated);
+      return updated;
     }));
   }
 
@@ -117,7 +151,9 @@ export default function TasksPage() {
   function toggleSubtask(taskId, subId) {
     setTasks(prev => prev.map(t => {
       if (t.id !== taskId) return t;
-      return { ...t, subtasks: t.subtasks.map(s => s.id === subId ? { ...s, done: !s.done } : s) };
+      const updated = { ...t, subtasks: t.subtasks.map(s => s.id === subId ? { ...s, done: !s.done } : s) };
+      persistTask(updated);
+      return updated;
     }));
   }
 
@@ -191,7 +227,9 @@ export default function TasksPage() {
         </form>
 
         <div className="tasks-list" aria-live="polite">
-          {tasks.length === 0 && <p className="tasks-empty-message">No tasks yet — add one above.</p>}
+          {loading && <p className="tasks-empty-message">Loading tasks…</p>}
+          {error && <p className="tasks-empty-message" style={{ color: '#b91c1c' }}>{error}</p>}
+          {!loading && tasks.length === 0 && <p className="tasks-empty-message">No tasks yet — add one above.</p>}
 
           {tasks.filter(matchesFilter).map(task => (
             <div key={task.id} className="task-item">
