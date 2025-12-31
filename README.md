@@ -1,40 +1,133 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# Najah — Study Companion
+
+Najah is a calming, productivity-focused study companion built with Next.js. It combines a friendly dashboard, full task management, a Pomodoro-style focus timer with lofi music, and an AI-powered homework helper — all wrapped in a cohesive aesthetic.
+
+## Overview
+
+- Beautiful dashboard with clouds, stats, and recent tasks
+- Task management with create, edit, delete, subtasks, priorities, and filters
+- Focus timer with editable time, start/pause, reset, and an integrated lofi playlist
+- Global audio `VolumeControl` overlay and bottom `Navigation` bar
+- AI-powered Homework Helper via a secure server API (Gemini)
+- Personal profile: avatar upload, display name, default timer preference, achievements and stats
+
+## Tech Stack
+
+- Next.js 16 (Pages Router)
+- React 19
+- lucide-react (icons)
+- react-markdown (assistant message rendering)
+
+## Features
+
+- Home Dashboard: quick stats, filters, and recent tasks ([pages/index.js](pages/index.js))
+- Tasks: CRUD, inline edits, priorities, due dates, and subtasks ([pages/tasks.js](pages/tasks.js))
+- Timer: Pomodoro timer with lofi playlist and audio crossfade ([pages/timer.js](pages/timer.js)), powered by [utils/audioService.js](utils/audioService.js)
+- Homework Help: chat UI with markdown rendering, backed by Gemini API ([pages/homework-help.js](pages/homework-help.js), [pages/api/chat.js](pages/api/chat.js))
+- Profile: avatar upload, name editing with content safeguards, default timer setting, achievements, stats ([pages/profile.js](pages/profile.js))
+- Global UI: bottom navigation ([components/Navigation.js](components/Navigation.js)) and floating volume control ([components/VolumeControl.js](components/VolumeControl.js))
+
+## Project Structure
+
+```
+components/
+	CloudDecoration.js
+	DashboardCard.js
+	Navigation.js
+	VolumeControl.js
+data/
+	tasks.json
+pages/
+	_app.js
+	_document.js
+	homework-help.js
+	index.js
+	profile.js
+	tasks.js
+	timer.js
+	api/
+		chat.js
+		hello.js
+		tasks.js
+public/
+	Assets/    # add screenshots and logos here
+styles/
+	globals.css
+	Home.module.css
+utils/
+	audioService.js
+```
 
 ## Getting Started
 
-First, run the development server:
+1) Install dependencies
+
+```bash
+npm install
+```
+
+2) Configure environment variables (for Homework Helper)
+
+Create a `.env.local` file in the project root:
+
+```bash
+GEMINI_API_KEY=your_api_key_here
+```
+
+3) Run the dev server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000 to view the app.
 
-You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
+## Scripts
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.js`.
+- `dev`: start Next.js in development
+- `build`: build the production bundle
+- `start`: run the production server
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+## API Endpoints
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `POST /api/chat`: server-side proxy to Gemini (requires `GEMINI_API_KEY`)
+- `GET /api/tasks`: fetch all tasks
+- `POST /api/tasks`: create a task
+- `PUT /api/tasks`: update a task
+- `DELETE /api/tasks?id=...`: delete a task
+- `GET /api/hello`: sample route
 
-## Learn More
+## Assets & Media
 
-To learn more about Next.js, take a look at the following resources:
+- Lofi tracks are loaded from the `public` folder (see `pages/timer.js`). Add your audio files there, e.g. `/Lofi.mp3`, `/Lofi1.mp3`, etc.
+- The app logo is referenced as `/najah-logo.png` on the home page — place your logo under `public/`.
+- For portfolio screenshots, add images to `public/Assets/` and reference them in this README.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+## Design Notes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Cohesive, friendly styling lives in [styles/globals.css](styles/globals.css)
+- Reusable stat cards ([components/DashboardCard.js](components/DashboardCard.js)) and decorative clouds ([components/CloudDecoration.js](components/CloudDecoration.js)) support the aesthetic
 
-## Deploy on Vercel
+## Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Najah is a standard Next.js app and can be deployed to any Node-compatible host. Vercel is recommended for simplest deploys.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+Basic Vercel deploy:
+
+1) Push the repo to GitHub
+2) Import the project in Vercel
+3) Add `GEMINI_API_KEY` in Project → Settings → Environment Variables
+4) Deploy
+
+## License
+
+See [LICENSE](LICENSE).
+
+## Attribution
+
+- Icons: lucide-react
+- Markdown rendering: react-markdown
+
+## Portfolio Blurb
+
+Najah demonstrates a polished end-to-end web app: interactive UI with consistent design, real-time task UX, audio management with crossfades, and a secure server-side AI integration. It highlights product thinking, UX polish, and practical engineering.
