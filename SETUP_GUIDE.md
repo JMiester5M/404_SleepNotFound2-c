@@ -5,9 +5,9 @@
 Your Next.js app (`najah-nextjs`) is 80% complete! Here's what's working:
 
 ### ✅ Core Infrastructure
-- Next.js project with pages router
-- All CSS styles copied
-- All music files and assets in `/public`
+ - Next.js project with pages router
+ - All CSS styles copied
+ - All music files and assets in `/dist`
 - Secure API routes for AI chat and task management
 - Components: Navigation, VolumeControl, DashboardCard, CloudDecoration
 - audioService utility (music player)
@@ -247,7 +247,9 @@ const apiKey = process.env.GEMINI_API_KEY; // Never sent to client!
 
 ### If music doesn't play:
 - Check browser console for errors
-- Make sure all .mp3 files are in `/public`
+ - Make sure all .mp3 files are in `/dist`
+
+Note: A startup helper script (`scripts/ensureDistAndPublic.js`) will rename `public` to `dist` on first run and recreate `public` for Next.js compatibility. Use `npm run dev` as normal.
 - Try clicking play button (browser may block autoplay)
 
 ### If API doesn't work:

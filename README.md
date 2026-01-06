@@ -49,7 +49,7 @@ pages/
 		chat.js
 		hello.js
 		tasks.js
-public/
+dist/
 	Assets/    # add screenshots and logos here
 styles/
 	globals.css
@@ -99,9 +99,11 @@ Open http://localhost:3000 to view the app.
 
 ## Assets & Media
 
-- Lofi tracks are loaded from the `public` folder (see `pages/timer.js`). Add your audio files there, e.g. `/Lofi.mp3`, `/Lofi1.mp3`, etc.
-- The app logo is referenced as `/najah-logo.png` on the home page — place your logo under `public/`.
-- For portfolio screenshots, add images to `public/Assets/` and reference them in this README.
+- Lofi tracks are loaded from the `dist` folder (see `pages/timer.js`). Add your audio files there, e.g. `/Lofi.mp3`, `/Lofi1.mp3`, etc.
+- The app logo is referenced as `/najah-logo.png` on the home page — place your logo under `dist/`.
+- For portfolio screenshots, add images to `dist/Assets/` and reference them in this README.
+
+Note: This project includes a helper script that will rename `public` → `dist` on first run and recreate `public` from `dist` so Next.js continues to serve static files. Start the app with `npm run dev` as usual.
 
 ## Design Notes
 

@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start"
+    "dev": "node scripts/ensureDistAndPublic.js && next dev",
+    "build": "node scripts/ensureDistAndPublic.js && next build",
+    "start": "node scripts/ensureDistAndPublic.js && next start"
   },
   "dependencies": {
     "lucide-react": "^0.556.0",
