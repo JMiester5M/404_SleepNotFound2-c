@@ -4,7 +4,7 @@ import audioService from '../utils/audioService';
 
 export default function TimerPage() {
   const DEFAULT_TIMER_MINUTES = 25;
-  // Timer state
+  // Timer state - will be initialized from localStorage in useEffect
   const [minutes, setMinutes] = useState(DEFAULT_TIMER_MINUTES);
   const [seconds, setSeconds] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
@@ -26,6 +26,9 @@ export default function TimerPage() {
   ]);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [hydrated, setHydrated] = useState(false);
+  const [isAlarmPlaying, setIsAlarmPlaying] = useState(false);
+  const [showAlarmOverlay, setShowAlarmOverlay] = useState(false);
+  const alarmAudioRef = useRef(null);
   
   // Get current song name from playlist
   const songName = playlist[currentTrackIndex]?.name || 'No song loaded';
@@ -38,11 +41,72 @@ export default function TimerPage() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const savedTimer = parseInt(localStorage.getItem('najahDefaultTimer'), 10);
-    if (!Number.isNaN(savedTimer)) {
-      setMinutes(savedTimer);
-      setInputMinutes(String(savedTimer).padStart(2, '0'));
+    
+    // Initialize alarm audio
+    if (!alarmAudioRef.current) {
+      alarmAudioRef.current = new Audio('/alarm.mp3');
+      alarmAudioRef.current.loop = true;
     }
+    
+    // Restore timer state
+    const savedMinutes = localStorage.getItem('najahTimerMinutes');
+    const savedSeconds = localStorage.getItem('najahTimerSeconds');
+    const savedRunning = localStorage.getItem('najahTimerRunning');
+    const savedTimestamp = localStorage.getItem('najahTimerStartTimestamp');
+    
+    let mins = 0;
+    let secs = 0;
+    
+    if (savedMinutes !== null) {
+      mins = parseInt(savedMinutes, 10);
+      if (Number.isNaN(mins)) mins = 0;
+    } else {
+      // If no saved timer state, use the default timer
+      const savedTimer = parseInt(localStorage.getItem('najahDefaultTimer'), 10);
+      if (!Number.isNaN(savedTimer)) {
+        mins = savedTimer;
+      } else {
+        mins = DEFAULT_TIMER_MINUTES;
+      }
+    }
+    
+    if (savedSeconds !== null) {
+      secs = parseInt(savedSeconds, 10);
+      if (Number.isNaN(secs)) secs = 0;
+    }
+    
+    // If timer was running, calculate elapsed time
+    if (savedRunning === 'true' && savedTimestamp) {
+      const startTime = parseInt(savedTimestamp, 10);
+      const now = Date.now();
+      const elapsedSeconds = Math.floor((now - startTime) / 1000);
+      
+      // Calculate remaining time
+      let totalSeconds = mins * 60 + secs - elapsedSeconds;
+      
+      if (totalSeconds <= 0) {
+        // Timer has finished
+        mins = 0;
+        secs = 0;
+        setIsRunning(false);
+        localStorage.setItem('najahTimerRunning', 'false');
+        localStorage.removeItem('najahTimerStartTimestamp');
+      } else {
+        // Timer still running
+        mins = Math.floor(totalSeconds / 60);
+        secs = totalSeconds % 60;
+        setIsRunning(true);
+      }
+    } else if (savedRunning === 'true') {
+      // Was running but no timestamp, just restore the state
+      setIsRunning(true);
+    }
+    
+    setMinutes(mins);
+    setSeconds(secs);
+    setInputMinutes(String(mins).padStart(2, '0'));
+    setInputSeconds(String(secs).padStart(2, '0'));
+    
     const savedPlaying = localStorage.getItem('najahMusicPlaying');
     setIsPlaying(savedPlaying === 'true');
     const savedTrack = localStorage.getItem('najahCurrentTrack');
@@ -148,25 +212,72 @@ export default function TimerPage() {
   // Timer countdown logic
   useEffect(() => {
     let interval;
-    if (isRunning && (minutes > 0 || seconds > 0)) {
+    if (isRunning) {
       interval = setInterval(() => {
         if (seconds === 0) {
           if (minutes === 0) {
+            // Timer just hit zero
             setIsRunning(false);
+            localStorage.setItem('najahTimerRunning', 'false');
+            localStorage.removeItem('najahTimerStartTimestamp');
+            // Pause music and play alarm sound
+            audioService.pause();
+            setIsPlaying(false);
+            localStorage.setItem('najahMusicPlaying', 'false');
+            if (alarmAudioRef.current) {
+              alarmAudioRef.current.currentTime = 0;
+              alarmAudioRef.current.play().catch(err => console.error('Alarm play failed', err));
+              setIsAlarmPlaying(true);
+              setShowAlarmOverlay(true);
+            }
           } else {
             setMinutes(minutes - 1);
             setSeconds(59);
+            localStorage.setItem('najahTimerMinutes', String(minutes - 1));
+            localStorage.setItem('najahTimerSeconds', '59');
+            // Update timestamp to current time
+            localStorage.setItem('najahTimerStartTimestamp', String(Date.now()));
           }
         } else {
           setSeconds(seconds - 1);
+          localStorage.setItem('najahTimerSeconds', String(seconds - 1));
+          // Update timestamp to current time
+          localStorage.setItem('najahTimerStartTimestamp', String(Date.now()));
         }
       }, 1000);
     }
     return () => clearInterval(interval);
   }, [isRunning, minutes, seconds]);
+  
+  // Persist timer state to localStorage whenever it changes
+  useEffect(() => {
+    if (hydrated) {
+      localStorage.setItem('najahTimerMinutes', String(minutes));
+      localStorage.setItem('najahTimerSeconds', String(seconds));
+      localStorage.setItem('najahTimerRunning', String(isRunning));
+    }
+  }, [minutes, seconds, isRunning, hydrated]);
 
   const handlePausePlay = () => {
-    setIsRunning(prev => !prev);
+    // Stop alarm if it's playing
+    if (isAlarmPlaying && alarmAudioRef.current) {
+      alarmAudioRef.current.pause();
+      alarmAudioRef.current.currentTime = 0;
+      setIsAlarmPlaying(false);
+      setShowAlarmOverlay(false);
+    }
+    
+    setIsRunning(prev => {
+      const newState = !prev;
+      if (newState) {
+        // Timer is starting/resuming - save current timestamp
+        localStorage.setItem('najahTimerStartTimestamp', String(Date.now()));
+      } else {
+        // Timer is pausing - remove timestamp
+        localStorage.removeItem('najahTimerStartTimestamp');
+      }
+      return newState;
+    });
     if (!isPlaying) {
       audioService.play().catch(err => {
         console.error('Play failed', err);
@@ -182,23 +293,61 @@ export default function TimerPage() {
   };
 
   const handleRefresh = () => {
+    // Stop alarm if it's playing
+    if (isAlarmPlaying && alarmAudioRef.current) {
+      alarmAudioRef.current.pause();
+      alarmAudioRef.current.currentTime = 0;
+      setIsAlarmPlaying(false);
+      setShowAlarmOverlay(false);
+    }
+    
     const savedTimer = parseInt(localStorage.getItem('najahDefaultTimer')) || 25;
     setIsRunning(false);
     setMinutes(savedTimer);
     setSeconds(0);
     setInputMinutes(String(savedTimer).padStart(2, '0'));
     setInputSeconds('00');
+    // Clear persisted timer state
+    localStorage.setItem('najahTimerMinutes', String(savedTimer));
+    localStorage.setItem('najahTimerSeconds', '0');
+    localStorage.setItem('najahTimerRunning', 'false');
+    localStorage.removeItem('najahTimerStartTimestamp');
     audioService.pause();
     setIsPlaying(false);
     localStorage.setItem('najahMusicPlaying', 'false');
   };
 
   const handleTimerClick = () => {
-    if (!isRunning) {
+    if (!isRunning && !isEditing) {
       setIsEditing(true);
       setInputMinutes(String(minutes).padStart(2, '0'));
       setInputSeconds(String(seconds).padStart(2, '0'));
     }
+  };
+
+  const handleSaveTime = () => {
+    const mins = inputMinutes === '' ? 0 : parseInt(inputMinutes);
+    let secs = inputSeconds === '' ? 0 : parseInt(inputSeconds);
+    // Clamp seconds to 0-59
+    if (secs > 59) secs = 59;
+    if (secs < 0) secs = 0;
+    setMinutes(mins);
+    setSeconds(secs);
+    setInputMinutes(String(mins).padStart(2, '0'));
+    setInputSeconds(String(secs).padStart(2, '0'));
+    setIsEditing(false);
+    // Persist manually edited timer values
+    localStorage.setItem('najahTimerMinutes', String(mins));
+    localStorage.setItem('najahTimerSeconds', String(secs));
+  };
+
+  const handleStopAlarm = () => {
+    if (alarmAudioRef.current) {
+      alarmAudioRef.current.pause();
+      alarmAudioRef.current.currentTime = 0;
+    }
+    setIsAlarmPlaying(false);
+    setShowAlarmOverlay(false);
   };
 
   const handleMinutesChange = (e) => {
@@ -234,11 +383,14 @@ export default function TimerPage() {
     setInputMinutes(String(mins).padStart(2, '0'));
     setInputSeconds(String(secs).padStart(2, '0'));
     setIsEditing(false);
+    // Persist manually edited timer values
+    localStorage.setItem('najahTimerMinutes', String(mins));
+    localStorage.setItem('najahTimerSeconds', String(secs));
   };
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
-      handleBlur();
+      handleSaveTime();
     }
   };
 
@@ -284,6 +436,22 @@ export default function TimerPage() {
 
   return (
     <>
+    {showAlarmOverlay && (
+      <div className="alarm-overlay" onClick={handleStopAlarm}>
+        <div className="alarm-overlay-content" onClick={(e) => e.stopPropagation()}>
+          <div className="alarm-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="64" height="64">
+              <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/>
+            </svg>
+          </div>
+          <h2 className="alarm-title">Time's Up!</h2>
+          <p className="alarm-message">Your timer has finished</p>
+          <button className="alarm-stop-button" onClick={handleStopAlarm}>
+            Stop Alarm
+          </button>
+        </div>
+      </div>
+    )}
     <div className="timer-page">
       <div className="timer-hero">
         <div className="timer-icon">
@@ -297,38 +465,49 @@ export default function TimerPage() {
       </div>
 
       <div className="timer-display-container">
-        <div 
-          className={`timer-display ${!isRunning ? 'timer-clickable' : ''}`} 
-          onClick={handleTimerClick}
-          title={!isRunning ? 'Click to set time' : ''}
-        >
-          {isEditing ? (
-            <div className="timer-edit" onClick={(e) => e.stopPropagation()}>
-              <input
-                type="text"
-                className="timer-input"
-                value={inputMinutes}
-                onChange={handleMinutesChange}
-                onBlur={handleBlur}
-                onKeyPress={handleKeyPress}
-                maxLength={2}
-                autoFocus
-              />
-              <span>:</span>
-              <input
-                type="text"
-                className="timer-input"
-                value={inputSeconds}
-                onChange={handleSecondsChange}
-                onBlur={handleBlur}
-                onKeyPress={handleKeyPress}
-                maxLength={2}
-              />
-            </div>
-          ) : (
-            <>
-              {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
-            </>
+        <div className="timer-display-wrapper">
+          <div 
+            className={`timer-display ${!isRunning ? 'timer-clickable' : ''}`} 
+            onClick={handleTimerClick}
+            title={!isRunning ? 'Click to set time' : ''}
+          >
+            {isEditing ? (
+              <div className="timer-edit">
+                <input
+                  type="text"
+                  className="timer-input"
+                  value={inputMinutes}
+                  onChange={handleMinutesChange}
+                  onKeyPress={handleKeyPress}
+                  maxLength={2}
+                  autoFocus
+                />
+                <span>:</span>
+                <input
+                  type="text"
+                  className="timer-input"
+                  value={inputSeconds}
+                  onChange={handleSecondsChange}
+                  onKeyPress={handleKeyPress}
+                  maxLength={2}
+                />
+              </div>
+            ) : (
+              <>
+                {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+              </>
+            )}
+          </div>
+          {isEditing && (
+            <button 
+              className="timer-save-button" 
+              onClick={handleSaveTime}
+              title="Save time"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+              </svg>
+            </button>
           )}
         </div>
         
